@@ -3,7 +3,7 @@ package io.swagger.api;
 import io.swagger.api.*;
 import rest.model.*;
 
-import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
+//import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
 import rest.model.NodeEdgeListEntry;
 
