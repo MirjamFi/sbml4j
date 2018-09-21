@@ -22,6 +22,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>1.8</java.version>
+		<swagger-core-version>2.0.0</swagger-core-version>
 	</properties>
 
 	<dependencies>
@@ -39,6 +40,14 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		
+		<dependency>
+      		<groupId>io.swagger.core.v3</groupId>
+      		<artifactId>swagger-jaxrs2</artifactId>
+      		<scope>compile</scope>
+      		<version>${swagger-core-version}</version>
+    	</dependency>
+    
 	</dependencies>
 
 	<build>
