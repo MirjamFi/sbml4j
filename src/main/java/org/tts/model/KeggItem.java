@@ -10,6 +10,20 @@ import org.neo4j.ogm.annotation.Version;
 @NodeEntity
 public class KeggItem {
 
+	public KeggItem() {
+		// default constructor for Spring to instantiate as been
+	}
+	
+	
+
+	public KeggItem(String keggIDString, String keggType) {
+		this.keggIDString = keggIDString;
+		this.keggType = keggType;
+		this.setKegg4jId(UUID.randomUUID().toString());
+	}
+
+
+
 	@Id @GeneratedValue
 	private Long id = null; // why initialize with null?
 
@@ -17,7 +31,7 @@ public class KeggItem {
 	private Long version;
 
 	// A unique Identifier that is persistent even if Neo4j reuses an id
-	private UUID kegg4jId;
+	private String kegg4jId;
 
 	// the KEGG identifierString
 	private String keggIDString;
@@ -47,11 +61,11 @@ public class KeggItem {
 		this.version = version;
 	}
 
-	public UUID getKegg4jId() {
+	public String getKegg4jId() {
 		return kegg4jId;
 	}
 
-	public void setKegg4jId(UUID kegg4jId) {
+	public void setKegg4jId(String kegg4jId) {
 		this.kegg4jId = kegg4jId;
 	}
 

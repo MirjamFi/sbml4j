@@ -30,7 +30,7 @@ public class GeneResponseEntity extends ResourceSupport{
 	public void addSelfLink() {
 		
 		this.add(linkTo(methodOn(KeggController.class)
-				.getGeneByKegg4jId(this.gene.getKegg4jId())
+				.getGeneByKegg4jId(this.gene.getKegg4jId().toString())
 			)
 			.withSelfRel());
 	}

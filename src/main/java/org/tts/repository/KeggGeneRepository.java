@@ -7,8 +7,8 @@ import org.tts.model.Gene;
 
 public interface KeggGeneRepository extends Neo4jRepository<Gene, Long> {
 
-	public Gene getBykeggIDString(String keggIDString);
+	public Gene getByKeggIDString(String keggIDString);
 	
-	public Gene getBykegg4jId(UUID kegg4jId);
+	public Gene getByKegg4jId(String kegg4jId);
 	
 }

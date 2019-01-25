@@ -11,7 +11,9 @@ public interface KeggGeneService {
 	
 	Gene saveOrUpdate(Gene gene);
 
-	Gene getByKegg4jId(UUID kegg4jId);
+	Gene getByKegg4jId(String kegg4jId);
+	
+	Gene getByKeggIDString(String keggIDString);
 	
 	
 }
