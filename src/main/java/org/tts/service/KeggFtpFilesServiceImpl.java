@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.tts.model.Gene;
@@ -14,26 +16,16 @@ import org.tts.model.GeneResponseEntity;
 
 @Service
 public class KeggFtpFilesServiceImpl implements KeggFtpFilesService {
-
-	@Override
-	public List<Gene> parseGenesFile(MultipartFile file) throws IOException {
-		List<Gene> genes = new ArrayList<Gene>();
-		BufferedReader br;
-		String line;
-		InputStream is = file.getInputStream();
-		br = new BufferedReader(new InputStreamReader(is));
-		while ((line = br.readLine()) != null) {
-			System.out.println(line);
-		}
-		return genes;
-	}
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+	
 
 	@Override
 	public List<GeneResponseEntity> convertToResponseEntities(List<Gene> genes) {
 		List<GeneResponseEntity> geneResponseEntities = new ArrayList<GeneResponseEntity>();
-		GeneResponseEntity currentGene = new GeneResponseEntity();
+		GeneResponseEntity currentGene;
 		if(genes != null) {
 			for (Gene gene : genes) {
+				currentGene = new GeneResponseEntity();
 				currentGene.clearLinks();
 				currentGene.setGene(gene);
 				currentGene.addSelfLink();

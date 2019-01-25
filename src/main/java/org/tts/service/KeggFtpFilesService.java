@@ -8,8 +8,6 @@ import org.tts.model.Gene;
 import org.tts.model.GeneResponseEntity;
 
 public interface KeggFtpFilesService {
-
-	List<Gene> parseGenesFile(MultipartFile file) throws IOException;
 	
 	List<GeneResponseEntity> convertToResponseEntities(List<Gene> genes);
 	
