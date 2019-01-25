@@ -1,15 +1,28 @@
 package org.tts.model;
 
 import java.util.List;
-import java.util.Map;
+
 import org.neo4j.ogm.annotation.NodeEntity;
-import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
 
 @NodeEntity
 public class Gene extends KeggItem {
 	
+	/**
+	 * Default Constructor for Spring
+	 */
+	public Gene() {}
+
+	/**
+	 * Constructor for creating new Genes upon reading in the genes file from ftp
+	 * @param keggIDString
+	 * @param keggType
+	 */
+	public Gene(String keggIDString, String keggType) {
+		super(keggIDString, keggType);
+	}
+
 	//  a link to an organism
 	@Relationship(type = "IN_ORGANISM", direction = Relationship.OUTGOING)
 	private List<Organism> organisms;
