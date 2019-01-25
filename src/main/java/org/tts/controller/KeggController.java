@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -68,18 +70,128 @@ public class KeggController {
 		br = new BufferedReader(new InputStreamReader(is));
 		String[] splitted;
 		Gene workingGene = null;
+		String lastLine = "";
+		Map<String, String> dbLinks = new HashMap<String, String> ();
 		while ((line = br.readLine()) != null) {
 			if(line.startsWith("ENTRY")) {
+				lastLine = "ENTRY";
+				logger.debug("Entry line");
 				workingGene = null;
 				splitted = line.split("\\s+");
 				for(int i =0; i!= splitted.length; i++) {
 					logger.debug(i + ": " + splitted[i]);
 				}
 				workingGene = new Gene(splitted[1], splitted[2]);
-			} else if(line.startsWith("///")) {
-				// entry is finished here	
+			} else if(line.startsWith("NAME")) {
+				lastLine = "NAME";
+				logger.debug("Name line");
+				splitted = line.split("\\s+");
+				for(int i =0; i!= splitted.length; i++) {
+					logger.debug(i + ": " + splitted[i]);
+				}
+				if(splitted.length > 1 && splitted[1].endsWith(",")) {
+					workingGene.setKeggNamePrimary(splitted[1].substring(0, splitted[1].length() - 1));
+				}
+				if(splitted.length > 2) {
+					String keggNamesSecondary = "";
+					for (int i = 2; i!= splitted.length; i++) {
+						keggNamesSecondary += splitted[i];
+					}
+					workingGene.setKeggNamesSecondary(keggNamesSecondary);
+				}
+			} else if(line.startsWith("DEFINITION")) {
+				lastLine = "DEFINITION";
+				logger.debug("Definition line");
+				workingGene.setKeggDefinition(line.substring(12));
+			} else if (line.startsWith("ORGANISM")) {
+				lastLine = "ORGANISM";
+				logger.debug("Organism Line");
+			} else if(line.startsWith("POSITION")) {
+				logger.debug("Position Line");
+				lastLine = "POSITION";
+				workingGene.setGenomePosition(line.split("\\s+")[1]);
+			} else if(line.startsWith("DBLINKS")) {
+				logger.debug("DBLinks Line");
+				lastLine = "DBLINKS";
+				splitted = line.split("\\s+");
+				dbLinks.put(splitted[1].substring(0, splitted[1].length() - 1), splitted[2]);
+			} else if(line.startsWith("STRUCTURE")) {
+				lastLine = "STRUCTURE";
+				workingGene.setPdbId(line.split("\\s+")[2]);
+			} else if(line.startsWith("AASEQ")) {
+				lastLine = "AASEQ";
+				workingGene.setAaSeqLength(Integer.parseInt(line.split("\\s+")[1]));
+				workingGene.setAaSeq("");
+			} else if(line.startsWith("NTSEQ")) {
+				lastLine = "NTSEQ";
+				workingGene.setNtSeqLength(Integer.parseInt(line.split("\\s+")[1]));
+				workingGene.setNtSeq("");
+			}
+			
+			else if(line.startsWith(" ")) {
+				if (lastLine.equals("NAME")) {
+					String keggNamesSecondary = workingGene.getKeggNamesSecondary();
+					splitted = line.split("\\s+");
+					for (String split : splitted) {
+						keggNamesSecondary += split;
+					}
+					workingGene.setKeggNamesSecondary(keggNamesSecondary);
+				} else if (lastLine.equals("DEFINITION")) {
+					workingGene.setKeggDefinition(workingGene.getKeggDefinition().concat(line.substring(12)));
+				} else if (lastLine.equals("ORGANISM")) {
+					logger.debug("WARNING: The last line was ORGANISM, and apparently this is the next line: " + line);
+				} else if (lastLine.equals("POSITION")) {
+					logger.debug("WARNING: The last line was POSITION, and apparently this is the next line: " + line);
+				} else if (lastLine.equals("DBLINKS")) {
+					splitted = line.split("\\s+");
+					dbLinks.put(splitted[1].substring(0, splitted[1].length() - 1), splitted[2]);
+				} else if (lastLine.equals("STRUCTURE")) {
+					logger.debug("WARNING: The last line was STRUCTURE, and apparently this is the next line: " + line);
+				} else if (lastLine.equals("AASEQ")) {
+					workingGene.setAaSeq(workingGene.getAaSeq().concat(line.trim()));
+				} else if (lastLine.equals("NTSEQ")) {
+					workingGene.setNtSeq(workingGene.getNtSeq().concat(line.trim()));
+				}
+			}
+			else if(line.startsWith("///")) {
+				// entry is finished here
+				
 				if(workingGene != null) {
 					logger.debug(workingGene.getKeggIDString() + ", " + workingGene.getKeggType());
+					for (String key : dbLinks.keySet()) {
+						switch (key) {
+						case "NCBI-GeneID":
+							workingGene.setNcbiGeneId(dbLinks.get(key));
+							break;
+						case "NCBI-ProteinID":
+							workingGene.setNcbiProteinID(dbLinks.get(key));
+							break;
+						case "OMIM":
+							workingGene.setOmimId(dbLinks.get(key));
+							break;
+						case "HGNC":
+							workingGene.setHgncId(dbLinks.get(key));
+							break;
+						case "Ensembl":
+							workingGene.setEnsembleId(dbLinks.get(key));
+							break;
+						case "Vega":
+							workingGene.setVegaId(dbLinks.get(key));
+							break;
+						case "Pharos":
+							workingGene.setPharosId(dbLinks.get(key));
+							break;
+						case "UniProt":
+							workingGene.setUniprotId(dbLinks.get(key));
+							break;
+						case "miRBase":
+							workingGene.setMiRBaseId(dbLinks.get(key));
+							break;
+						default:
+							logger.debug("Warning: There is a different case for dbLinks: " + key + " with entry: " + dbLinks.get(key));
+							break;
+						}
+					}
 					Gene existingGene = keggGeneService.getByKeggIDString(workingGene.getKeggIDString());
 					if(existingGene != null) {
 						logger.debug("Gene exists, attempting to update");
