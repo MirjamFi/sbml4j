@@ -32,6 +32,13 @@ public class GraphQualitativeSpecies extends GraphSBase{
 	@Relationship(type = "IS_SPECIES", direction = Relationship.OUTGOING)
 	private GraphSpecies species;
 	
+	@Relationship(type = "BQB_IS", direction = Relationship.OUTGOING)
+	private List<Gene> bqbIsGeneList;
+	
+	@Relationship(type = "BQB_HAS_VERSION", direction = Relationship.OUTGOING)
+	private List<Gene> bqbHasVersionGeneList;
+	
+	
 	private int sbmlMaxLevel;
 	
 	private int sbmlInitialLevel;
@@ -70,7 +77,25 @@ public class GraphQualitativeSpecies extends GraphSBase{
 		}
 		// CVTerms
 		cvTermMap = new HashMap<String, List<String>>();
+		bqbIsGeneList = new ArrayList<Gene>();
+		bqbHasVersionGeneList = new ArrayList<Gene>();
 		for(CVTerm cvterm : qualitativeSpecies.getCVTerms()) {
+			
+			if(cvterm.getBiologicalQualifierType() != null 
+					&& (cvterm.getBiologicalQualifierType().equals(CVTerm.Qualifier.BQB_HAS_VERSION)
+							 || (cvterm.getBiologicalQualifierType().equals(CVTerm.Qualifier.BQB_IS))
+						)
+			)
+			{
+				for(int i = 0; i!= cvterm.getResourceCount(); i++) {
+					if (cvterm.getResource(i).startsWith("http://identifiers.org/kegg.genes/hsa:"))
+					{
+						System.out.println("This could link to a kegg gene: " + cvterm.getBiologicalQualifierType().toString() + ": " + cvterm.getResource(i));
+					}
+				}
+			}
+			
+			
 			// check if key already present
 			if(cvTermMap.containsKey(cvterm.toString())){
 				// already present
