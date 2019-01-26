@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+
 
 @RestController
 public class KeggController {
@@ -40,7 +40,11 @@ public class KeggController {
 		this.keggGeneService = keggGeneService;
 		this.keggFtpFilesService = keggFtpFilesService;
 	}
-	
+	@RequestMapping(value = "/keggGenes", method=RequestMethod.GET)
+	public ResponseEntity<List<GeneResponseEntity>> getKeggGenes(@RequestParam("organism") String organism)
+	{
+		return new ResponseEntity<List<GeneResponseEntity>>(keggFtpFilesService.convertToResponseEntities(keggGeneService.findAll()), HttpStatus.OK);
+	}
 	
 	@RequestMapping(value = "/keggGenes", method=RequestMethod.POST)
 	public ResponseEntity<List<GeneResponseEntity>> loadKeggGenes(@RequestParam("file") MultipartFile file)
@@ -205,7 +209,6 @@ public class KeggController {
 		}
 		return genes;
 	}
-
 
 	@RequestMapping(value = "/keggGene/{kegg4jId}", method=RequestMethod.GET)
 	public Gene getGeneByKegg4jId(@PathVariable String kegg4jId) {
