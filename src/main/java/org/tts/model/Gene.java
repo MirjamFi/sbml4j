@@ -31,7 +31,7 @@ public class Gene extends KeggItem {
 	private String keggDefinition;
 	
 	// id of the kegg orthology entry
-	private String keggOrhologyId;
+	private String keggOrthologyId;
 	
 	// Name of the kegg orthology entry
 	private String keggOrthologyString;
@@ -103,11 +103,11 @@ public class Gene extends KeggItem {
 	}
 
 	public String getKeggOrhologyId() {
-		return keggOrhologyId;
+		return keggOrthologyId;
 	}
 
 	public void setKeggOrhologyId(String keggOrhologyId) {
-		this.keggOrhologyId = keggOrhologyId;
+		this.keggOrthologyId = keggOrhologyId;
 	}
 
 	public String getKeggOrthologyString() {
