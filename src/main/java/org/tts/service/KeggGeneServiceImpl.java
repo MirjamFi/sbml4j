@@ -62,6 +62,14 @@ public class KeggGeneServiceImpl implements KeggGeneService {
 		
 		return keggGeneRepository.getByKeggIDString(keggIDString);
 	}
+
+
+	@Override
+	public List<Gene> findAll() {
+		List<Gene> allGenes = new ArrayList<Gene>();
+		keggGeneRepository.findAll().forEach(allGenes::add);
+		return allGenes;
+	}
 	
 	
 	

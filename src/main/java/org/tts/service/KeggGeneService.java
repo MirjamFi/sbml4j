@@ -14,6 +14,8 @@ public interface KeggGeneService {
 	Gene getByKegg4jId(String kegg4jId);
 	
 	Gene getByKeggIDString(String keggIDString);
+
+	List<Gene> findAll();
 	
 	
 }
