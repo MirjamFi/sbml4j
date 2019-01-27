@@ -1,5 +1,13 @@
 package org.tts.controller;
 
+import org.sbml.jsbml.CVTerm;
+import org.sbml.jsbml.CVTerm.Qualifier;
+import org.sbml.jsbml.ListOf;
+import org.sbml.jsbml.Model;
+import org.sbml.jsbml.SBMLReader;
+import org.sbml.jsbml.ext.qual.QualModelPlugin;
+import org.sbml.jsbml.ext.qual.QualitativeSpecies;
+import org.sbml.jsbml.ext.qual.Transition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.tts.model.Gene;
 import org.tts.model.GeneResponseEntity;
+import org.tts.model.KeggTransition;
 import org.tts.service.KeggFtpFilesService;
 import org.tts.service.KeggGeneService;
 
@@ -25,14 +34,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.stream.XMLStreamException;
+
 
 @RestController
 public class KeggController {
-
+	
 	private KeggGeneService keggGeneService;
 	private KeggFtpFilesService keggFtpFilesService;
 
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	private String qualModelShortHandle = "qual";
 	
 	@Autowired
 	public KeggController(KeggGeneService keggGeneService, KeggFtpFilesService keggFtpFilesService) {
@@ -65,7 +78,103 @@ public class KeggController {
 		
 	}
 
+	@RequestMapping(value="/keggSbmlNonMetabolic", method=RequestMethod.POST)
+	public ResponseEntity<String> readSBMLNonMetabolic(@RequestParam("file") MultipartFile file)
+	{
+		Model readModel = readModel(file);
+		if(readModel != null) {
+			QualModelPlugin qualModelPlugin = (QualModelPlugin) readModel.getExtension(qualModelShortHandle);
+			if (qualModelPlugin != null) {
+				ListOf<QualitativeSpecies> qualSpecies = qualModelPlugin.getListOfQualitativeSpecies();
+				ListOf<Transition> transitions = qualModelPlugin.getListOfTransitions();
+				for (Transition transition : transitions) {
+					int sboTerm = transition.getSBOTerm();
+					if (transition.getListOfInputs().size() > 0 && transition.getListOfInputs().size() != 1) {
+						return new ResponseEntity<String>("More than one input on transition " + transition.getId(), HttpStatus.BAD_REQUEST);
+					} else if (transition.getListOfOutputs().size() > 0 && transition.getListOfOutputs().size() != 1) {
+						return new ResponseEntity<String>("More than one output on transition " + transition.getId(), HttpStatus.BAD_REQUEST);
+					} else {
+						QualitativeSpecies inputQualSpecies = transition.getListOfInputs().get(0).getQualitativeSpeciesInstance();
+						QualitativeSpecies outputQualSpecies = transition.getListOfOutputs().get(0).getQualitativeSpeciesInstance();
+						String inputKeggQualifier = "";
+						String outputKeggQualifier = "";
+						if (inputQualSpecies.getSBOTerm() == 252) {
+							inputKeggQualifier = getKeggURIforQualSpecies(inputQualSpecies);
+							if (inputKeggQualifier == null) {
+								return new ResponseEntity<String>("No Kegg.genes cvterm for qualspecies " + inputQualSpecies.getId(), HttpStatus.BAD_REQUEST);
+							}
+						}
+						if (outputQualSpecies.getSBOTerm() == 252) {
+							outputKeggQualifier = getKeggURIforQualSpecies(outputQualSpecies);
+							if (outputKeggQualifier == null) {
+								return new ResponseEntity<String>("No Kegg.genes cvterm for qualspecies " + inputQualSpecies.getId(), HttpStatus.BAD_REQUEST);
+							}
+						}
+						if (!inputKeggQualifier.equals("") && ! outputKeggQualifier.equals("")) {
+							String transitionIdString = "";
+							try {
+								transitionIdString = inputKeggQualifier.split(":")[2] + "-" + sboTerm + "-" + outputKeggQualifier.split(":")[2];
+							} catch (Exception e) {
+								return new ResponseEntity<String>("Could not build Transition Id for transition " + transition.getId(), HttpStatus.BAD_REQUEST);
+							}
+							// here I have an id for the transition
+							// and the id's of the polypeptide chains connected
+							// TODO: other types of transition, with other species as in/output
+							logger.debug("TransitionId for transition " + transition.getId() + " will be: " + transitionIdString);
+							// create transition node
+							KeggTransition keggTransition = new KeggTransition(transitionIdString, "keggTransition");
+							// connect to genes
+							Gene inputGene = keggGeneService.getByKeggIDString(inputKeggQualifier.split(":")[2]);
+							Gene outputGene = keggGeneService.getByKeggIDString(outputKeggQualifier.split(":")[2]);
+							if(inputGene != null && outputGene != null) {
+								keggTransition.setInputGene(inputGene);
+								keggTransition.setOutputGene(outputGene);
+								keggTransition.setSboTerm(sboTerm);
+								logger.info("Created Transition: " + keggTransition.toString());
+							} else {
+								logger.info("Could not create Transition");
+								//return new ResponseEntity<String>("Could not build Transition Id for transition " + transition.getId(), HttpStatus.BAD_REQUEST);
+							}
+							
+						}
+					}
+				}
+				
+				return new ResponseEntity<String>("All good so far", HttpStatus.OK);
+			} else {
+				return new ResponseEntity<String>("QualModelPlugin is null", HttpStatus.BAD_REQUEST);
+			}
+		} else {
+			return new ResponseEntity<String>("Failed to read in Model", HttpStatus.BAD_REQUEST);
+		}
+	}
+	
+	private String getKeggURIforQualSpecies(QualitativeSpecies qualSpecies) {
+		for (CVTerm term : qualSpecies.getCVTerms()) {
+			if (term.getQualifier().equals(Qualifier.BQB_IS) && term.getResourceCount() > 0) {
+				logger.debug(qualSpecies.getId() + ": Found BQB_IS term with value (0/" + term.getResourceCount() + "): " + term.getResource(0));
+				if(term.getResource(0).contains("kegg.genes"))  {
+					return term.getResource(0);
+				}
+			} else if (term.getQualifier().equals(Qualifier.BQB_HAS_VERSION) && term.getResourceCount() > 0) {
+				logger.debug(qualSpecies.getId() + ": Found BQB_HAS_VERSION term with value (0/" + term.getResourceCount() + "): " + term.getResource(0));
+				if(term.getResource(0).contains("kegg.genes")) {
+					return term.getResource(0);
+				}
+			}
+		}
+		return null;
+	}
 
+	private Model readModel(MultipartFile file) {
+		try {
+			return SBMLReader.read(file.getInputStream()).getModel();
+		} catch (XMLStreamException | IOException e) {
+			logger.info("Failed to read file " + file.getOriginalFilename());
+			logger.debug(e.getLocalizedMessage());
+			return null;
+		}
+	}
 	private List<Gene> parseGenesFile(MultipartFile file) throws IOException {
 		List<Gene> genes = new ArrayList<Gene>();
 		BufferedReader br;
