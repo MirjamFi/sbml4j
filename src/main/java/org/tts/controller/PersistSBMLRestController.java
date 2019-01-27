@@ -197,7 +197,7 @@ public class PersistSBMLRestController {
 		}
 		Instant end = Instant.now(); // creation of the model
 		durationList.add(Duration.between(start, end).toMillis()); //[0]
-		logger.debug("Created GraphModel");
+		logger.info("Created GraphModel");
 		/**
 		 * Look at the compartments of the new model
 		 * Are they already existing by sbmlIdString?
@@ -227,7 +227,7 @@ public class PersistSBMLRestController {
 		}
 		end = Instant.now(); // compartment
 		durationList.add(Duration.between(start, end).toMillis()); //[1]
-		logger.debug("Created compartments");
+		logger.info("Created compartments");
 		/**
 		 * Look at the species of the new model
 		 * Are they already existing by sbmlIdString?
@@ -261,7 +261,7 @@ public class PersistSBMLRestController {
 		}
 		end = Instant.now(); // species
 		durationList.add(Duration.between(start, end).toMillis()); //[2]
-		logger.debug("Created species");
+		logger.info("Created species");
 		/**
 		 * Look at the QualitativeSpecies of the new model
 		 * only if @param createQual is true (that is if we have a non metabolic model which uses these
@@ -295,7 +295,7 @@ public class PersistSBMLRestController {
 		}
 		end = Instant.now(); // Qualitative Species
 		durationList.add(Duration.between(start, end).toMillis()); //[3]
-		logger.debug("Created qualtiative species");
+		logger.info("Created qualtiative species");
 		/**
 		 * Look at the Transitions of the new model
 		 * only if @param createQual is true (that is if we have a non metabolic model which uses these
@@ -335,7 +335,7 @@ public class PersistSBMLRestController {
 		}
 		end = Instant.now(); // Transitions 
 		durationList.add(Duration.between(start, end).toMillis()); //[4]
-		logger.debug("Created Transitions");
+		logger.info("Created Transitions");
 		/**
 		 * Look at the QualitativeSpecies of the new model
 		 * Is it already existing by sbmlIdString?
@@ -363,7 +363,7 @@ public class PersistSBMLRestController {
 			}
 			reactionService.saveOrUpdate(reaction);
 		}
-		logger.debug("Created reactions");
+		logger.info("Created reactions");
 		end = Instant.now(); // reactions
 		durationList.add(Duration.between(start, end).toMillis()); // [5]
 		start = Instant.now();		
@@ -449,13 +449,13 @@ public class PersistSBMLRestController {
 		// Now output the times
 		// Order of durations:
 		// Model, compartment, species, reaction, transition qualSpec, persisting
-		logger.debug("Model creation took " + durationList.get(0));
-		logger.debug("compartment persistence took " + durationList.get(1));
-		logger.debug("species persistence took " + durationList.get(2));
-		logger.debug("qualSpecies persistence took " + durationList.get(3));
-		logger.debug("transition persistence took " + durationList.get(4));
-		logger.debug("reaction persistence took " + durationList.get(5));
-		logger.debug("GraphModel persistence took " + durationList.get(6));
+		logger.info("Model creation took " + durationList.get(0));
+		logger.info("compartment persistence took " + durationList.get(1));
+		logger.info("species (" + graphModel.getListSpecies().size() + ") persistence took " + durationList.get(2));
+		logger.info("qualSpecies persistence took " + durationList.get(3));
+		logger.info("transition persistence took " + durationList.get(4));
+		logger.info("reaction (" + graphModel.getListReaction().size() + ") persistence took " + durationList.get(5));
+		logger.info("GraphModel persistence took " + durationList.get(6));
 		
 		
 		return graphModel;
