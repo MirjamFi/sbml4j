@@ -292,9 +292,13 @@ public class GraphModel {
 	private List<GraphReaction> createReactionList(ListOf<Reaction> listOfReactions) {
 		List<GraphReaction> theList = new ArrayList<GraphReaction>();
 		for (Reaction reaction : listOfReactions) {
-			for (int i = 0; i != listCompartment.size(); i++) {
-				if (listCompartment.get(i).getSbmlIdString().equals(reaction.getCompartment())) {
-					theList.add(new GraphReaction(reaction, listCompartment.get(i), listSpecies, this));
+			if(reaction.getLevel() < 3 && listCompartment.size() == 1) {
+				theList.add(new GraphReaction(reaction, listCompartment.get(0), listSpecies, this));
+			} else {
+				for (int i = 0; i != listCompartment.size(); i++) {
+					if (listCompartment.get(i).getSbmlIdString().equals(reaction.getCompartment())) {
+						theList.add(new GraphReaction(reaction, listCompartment.get(i), listSpecies, this));
+					}
 				}
 			}
 		}
