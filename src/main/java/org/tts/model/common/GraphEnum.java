@@ -3,6 +3,13 @@ package org.tts.model.common;
 public class GraphEnum {
 	
 	
+	
+	/**
+	 * COPY<br>
+	 * ANNOTATE<br>
+	 * FILTER<br>
+	 * CONTEXT
+	 */
 	public enum MappingStep {
 		COPY,
 		ANNOTATE,
@@ -10,6 +17,13 @@ public class GraphEnum {
 		CONTEXT
 	}
 	
+	/**
+	 * PPI<br>
+	 * REGULATORY<br>
+	 * METABOLIC<br>
+	 * SIGNALLING<br>
+	 * PATHWAYMAPPING
+	 */
 	public enum NetworkMappingType {
 		PPI,
 		REGULATORY,
@@ -189,6 +203,13 @@ public class GraphEnum {
 	}
 	
 	
+	
+	/**
+	 * KEGG <br>
+	 * OTHER
+	 * @author ttiede
+	 *
+	 */
 	public enum IDSystem{
 		KEGG,
 		OTHER
