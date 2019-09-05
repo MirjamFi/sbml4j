@@ -179,8 +179,13 @@ public class WarehouseController {
 	}
 	
 	@RequestMapping(value = "/networkInventory", method = RequestMethod.GET)
-	public ResponseEntity<List<NetworkInventoryItem>> listAllNetworks(@RequestHeader("user") String username) {
-		List<NetworkInventoryItem> networkInventory = this.warehouseGraphService.getListOfNetworkInventoryItems();
+	public ResponseEntity<List<NetworkInventoryItem>> listAllNetworks(@RequestHeader("user") String username, @RequestParam(value = "networkType", defaultValue = "all") String networkType) {
+		List<NetworkInventoryItem> networkInventory;
+		if(networkType.equals("all")) {
+			networkInventory = this.warehouseGraphService.getListOfNetworkInventoryItems();
+		} else {
+			networkInventory = this.warehouseGraphService.getListOfNetworkInventoryItems(networkType);
+		}
 		return new ResponseEntity<List<NetworkInventoryItem>>(networkInventory, HttpStatus.OK);
 	}
 	
@@ -235,8 +240,25 @@ public class WarehouseController {
 			newSpeciesList = this.warehouseGraphService.copyAndFilterFlatSpeciesList(oldSpeciesList, options);
 			break;
 		case ANNOTATE:
+			if(options.getAnnotationName() == null || options.getAnnotationName().equals("") || options.getAnnotation().size() < 1) {
+				//annotation information not complete
+				return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+			}
 			// same as copy, but add annotation from options (this means FilterOptions needs to be extended)
+			logger.info("Adding annotation with Name: " + options.getAnnotationName());
+			newMapping.addAnnotationType(options.getAnnotationName(), options.getAnnotationType());
+			newMapping = this.warehouseGraphService.saveMappingNode(newMapping, 0);
+			
+			Map<String, Object> newAnnotation = options.getAnnotation();
 			newSpeciesList = this.warehouseGraphService.copyFlatSpeciesList(oldSpeciesList);
+			for (FlatSpecies fs : newSpeciesList) {
+				/**Map<String, Object> flatSpeciesAnnotation = new HashMap<>();
+				flatSpeciesAnnotation.put(options.getAnnotationName(), newAnnotation.get(fs.getSymbol()));
+				fs.addAnnotation(flatSpeciesAnnotation);*/
+				if(newAnnotation.containsKey(fs.getSymbol())) {
+					fs.addAnnotation(options.getAnnotationName(), newAnnotation.get(fs.getSymbol()));
+				}
+			}
 			break;
 		case CONTEXT:
 			// this needs one (or) more nodes in the options
@@ -336,6 +358,7 @@ public class WarehouseController {
 		}
 		*/
 		Instant startTime = Instant.now();
+		
 		NodeEdgeList nel = this.warehouseGraphService.getNetwork(mappingNodeEntityUUID, method);
 		Instant middleTime = Instant.now();
 		resource = this.networkMappingService.getResourceFromNodeEdgeList(nel, format);
@@ -357,6 +380,20 @@ public class WarehouseController {
 			return new ResponseEntity<Resource>(HttpStatus.NO_CONTENT);
 		}
 	}
+	
+	@RequestMapping(value="/network", method = RequestMethod.DELETE)
+	public ResponseEntity<Resource> deleteNetwork(@RequestParam("UUID") String mappingNodeEntityUUID) {
+		// do we want a delete activity?
+		// if so, the network would probably stay and get flagged as deleted
+		// delete the network node
+		// delete all content nodes connected to it
+		// activity that created the network
+		// user that created the network -> should stay
+		return null;
+		
+	}
+	
+	
 
 	@RequestMapping(value = "/networkInventory/{entityUUID}/filterOptions", method = RequestMethod.GET)
 	public ResponseEntity<FilterOptions> getNetworkFilterOptions(@PathVariable String entityUUID) {
