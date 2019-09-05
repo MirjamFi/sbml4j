@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.neo4j.annotation.Query;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
+import org.tts.model.api.Output.MetabolicNetworkItem;
 import org.tts.model.api.Output.NodeNodeEdge;
 import org.tts.model.common.GraphBaseEntity;
 import org.tts.model.common.GraphEnum.IDSystem;
@@ -216,6 +217,53 @@ public interface GraphBaseEntityRepository extends Neo4jRepository<GraphBaseEnti
 			)
 	Iterable<NodeNodeEdge> getFlatMetabolicReactionsForPathway(String entityUUID, IDSystem idSystem);
 
+	
+	//match (n:PathwayNode)-[w1:Warehouse]-(s:SBMLSpecies) where n.entityUUID = "f218d66a-d0d0-49e0-b834-ebb6bb5021dd" and w1.warehouseGraphEdgeType="CONTAINS" with s match (e:ExternalResourceEntity)-[b:BQ]-(s)-[t]-(r:SBMLSimpleReaction)  where b.qualifier="BQB_IS" and e.type="KEGGCOMPOUND" return e, b, s, t, r
+			
+	@Query(value="MATCH "
+			+ "(p:PathwayNode)"
+			+ "-[w:Warehouse]-"
+			+ "(r:SBMLSimpleReaction) "
+			+ "WHERE p.entityUUID = $entityUUID "
+			+ "AND w.warehouseGraphEdgeType = \"CONTAINS\" "
+			+ "WITH r "
+			+ "MATCH (r)"
+			+ "-[t]->"
+			+ "(s:SBMLSpecies)"
+			+ "-[bq:BQ]-"
+			+ "(e:ExternalResourceEntity) "
+			+ "WHERE e.databaseFromUri = $idSystem "
+			+ "AND bq.qualifier IN [\"BQB_HAS_VERSION\", \"BQB_IS\", \"BQB_IS_ENCODED_BY\"] "
+			+ "RETURN "
+			+ "r as reaction, "
+			+ "s as sbmlSpecies, "
+			+ "e as externalResourceEntity, "
+			+ "type(t) as transitionType")
+	Iterable<MetabolicNetworkItem> getMetabolicNetworkItemsFromPathway(String entityUUID, IDSystem idSystem);
+	
+	
+	@Query(value="MATCH "
+			+ "(p:PathwayNode)"
+			+ "-[w:Warehouse]-"
+			+ "(r:SBMLSimpleReaction) "
+			+ "WHERE p.entityUUID = $entityUUID "
+			+ "AND w.warehouseGraphEdgeType = \"CONTAINS\" "
+			+ "WITH r "
+			+ "MATCH (r)"
+			+ "-[t]->"
+			+ "(s:SBMLSpecies)"
+			+ "-[bq:BQ]-"
+			+ "(e:ExternalResourceEntity) "
+			+ "WHERE e.databaseFromUri = $idSystem "
+			+ "AND e.type in $externalResourceType "
+			+ "AND bq.qualifier IN [\"BQB_HAS_VERSION\", \"BQB_IS\", \"BQB_IS_ENCODED_BY\"] "
+			+ "RETURN "
+			+ "r as reaction, "
+			+ "s as sbmlSpecies, "
+			+ "e as externalResourceEntity, "
+			+ "type(t) as transitionType")
+	Iterable<MetabolicNetworkItem> getMetabolicNetworkItemsFromPathway(String entityUUID, IDSystem idSystem, List<String> externalResourceType);
+	
 	@Query(value="MATCH"
 			+ "(p:PathwayNode {entityUUID: {0}})"
 			+ "-[:Warehouse {warehouseGraphEdgeType: \"CONTAINS\"}]-"
