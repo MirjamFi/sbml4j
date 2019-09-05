@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.tts.controller.WarehouseController;
 import org.tts.model.api.Input.FilterOptions;
 import org.tts.model.api.Input.PathwayCollectionCreationItem;
+import org.tts.model.api.Output.MappingReturnType;
 import org.tts.model.api.Output.NetworkInventoryItem;
 import org.tts.model.api.Output.NodeEdgeList;
 import org.tts.model.api.Output.NodeNodeEdge;
@@ -38,7 +39,7 @@ import org.tts.model.common.SBMLSBaseEntity;
 import org.tts.model.common.SBMLSpecies;
 import org.tts.model.common.SBMLSpeciesGroup;
 import org.tts.model.flat.FlatSpecies;
-import org.tts.model.full.SBMLReaction;
+import org.tts.model.simple.SBMLSimpleReaction;
 import org.tts.model.provenance.ProvenanceEntity;
 import org.tts.model.provenance.ProvenanceGraphActivityNode;
 import org.tts.model.provenance.ProvenanceGraphAgentNode;
@@ -223,6 +224,11 @@ public class WarehouseGraphServiceImpl implements WarehouseGraphService {
 		newMappingNode.setMappingName(mappingName);
 		return this.mappingNodeRepository.save(newMappingNode);
 	}
+	
+	@Override
+	public MappingNode saveMappingNode(MappingNode node, int depth) {
+		return this.mappingNodeRepository.save(node, depth);
+	}
 
 	@Override
 	public WarehouseGraphNode saveWarehouseGraphNodeEntity(WarehouseGraphNode node, int depth) {
@@ -253,7 +259,7 @@ public class WarehouseGraphServiceImpl implements WarehouseGraphService {
 				else if (node.getClass() == SBMLSimpleTransition.class) {
 					item.addTransitionType(this.utilityService.translateSBOString(((SBMLSBaseEntity)node).getsBaseSboTerm()));
 					item.increaseTransitionCounter();
-				} else if (node.getClass() == SBMLReaction.class) {
+				} else if (node.getClass() == SBMLSimpleReaction.class) {
 					item.increaseReactionCounter();
 				} else if (node.getClass() == SBMLCompartment.class) {
 					item.addCompartment(((SBMLCompartment)node).getsBaseName());
@@ -464,12 +470,34 @@ public class WarehouseGraphServiceImpl implements WarehouseGraphService {
 		return inventory;
 		
 	}
+	
+	@Override
+	public List<NetworkInventoryItem> getListOfNetworkInventoryItems(String networkType) {
+		List<NetworkInventoryItem> inventory = new ArrayList<>();
+		// get all mapping nodes
+		for (MappingNode mapping : this.mappingNodeRepository.findAll()) {
+			// create an inventory item for each of them and fill it.
+			if (mapping.getMappingType().equals(NetworkMappingType.valueOf(networkType))) {
+				inventory.add(this.getNetworkIventoryItem(mapping));
+			}
+			
+		}
+		return inventory;
+		
+	}
 
 	@Override
 	public NodeEdgeList getNetwork(String mappingNodeEntityUUID, String method) {
-		//MappingNode mapping = this.mappingNodeRepository.findByEntityUUID(mappingNodeEntityUUID);
 		Instant start = Instant.now();
 		NodeEdgeList mappingNEL = new NodeEdgeList();
+		if (this.mappingNodeRepository.findByEntityUUID(mappingNodeEntityUUID).getMappingName().contains("ANNOTATE")) {
+			if (method.equals("directed") || method.equals("undirected")) {
+				logger.info("Overriding network extraction method due to existing annotations");
+				method = "properties";
+			}
+			mappingNEL.setAnnotationType(this.mappingNodeRepository.findByEntityUUID(mappingNodeEntityUUID).getAnnotationType());
+		}
+		
 		Instant mappingNelTime = Instant.now();
 		Instant insideLoggedTime;
 		Instant insideRetrievedTime;
@@ -494,6 +522,30 @@ public class WarehouseGraphServiceImpl implements WarehouseGraphService {
 			mappingNEL.setName(mappingNodeEntityUUID);
 			mappingNEL.setListId(-1L);
 			
+		} else if (method.equals("properties")) {
+			logger.info("Using properties method to get MappingContent for mapping " + mappingNodeEntityUUID);
+			insideLoggedTime = Instant.now();
+			List<MappingReturnType> mappingReturnList = this.mappingNodeRepository.getMappingContentAsProperties(mappingNodeEntityUUID);
+			insideRetrievedTime = Instant.now();
+			for (MappingReturnType mrt : mappingReturnList) {
+				logger.info("Aha");
+				Map<String, Object> node1Annotation = new HashMap<>();
+				for (String key : mrt.getNode1Properties().keySet()) {
+					if(key.startsWith("annotation")) {
+						node1Annotation.put(key.split("\\.")[1], mrt.getNode1Properties().get(key));
+					}
+				}
+				Map<String, Object> node2Annotation = new HashMap<>();
+				for (String key : mrt.getNode2Properties().keySet()) {
+					if(key.startsWith("annotation")) {
+						node2Annotation.put(key.split("\\.")[1], mrt.getNode2Properties().get(key));
+					}
+				}
+				mappingNEL.addListEntry((String) mrt.getNode1Properties().get("symbol"), (String) mrt.getNode1Properties().get("entityUUID"), node1Annotation, (String) mrt.getNode2Properties().get("symbol"), (String) mrt.getNode2Properties().get("entityUUID"), node2Annotation, mrt.getEdge());
+			}
+			insideretrievedAndSetTime = Instant.now();
+			mappingNEL.setName(mappingNodeEntityUUID);
+			mappingNEL.setListId(-1L);
 		} else {
 			logger.info("Using standard method to get MappingContent for mapping " + mappingNodeEntityUUID);
 			insideLoggedTime = Instant.now();
@@ -506,7 +558,7 @@ public class WarehouseGraphServiceImpl implements WarehouseGraphService {
 				node1.getAllRelatedSpecies().forEach((relationType, node2List) -> {
 					for (FlatSpecies node2 : node2List) {
 						//logger.info("Working on Node " + species.getSymbol() + " connected with " + relationType + " to " + node2.getSymbol());
-						mappingNEL.addListEntry(node1.getSymbol(), node1.getSimpleModelEntityUUID(), node2.getSymbol(), node2.getSimpleModelEntityUUID(), this.utilityService.translateSBOString(relationType));
+						mappingNEL.addListEntry(node1.getSymbol(), node1.getSimpleModelEntityUUID(), node1.getAnnotation(), node2.getSymbol(), node2.getSimpleModelEntityUUID(), node2.getAnnotation(), this.utilityService.translateSBOString(relationType));
 					}
 				});
 			}

@@ -95,5 +95,9 @@ public interface WarehouseGraphService {
 	public List<FlatSpecies> copyAndFilterFlatSpeciesList(List<FlatSpecies> originalFlatSpeciesList, FilterOptions options);
 
 	public List<FlatSpecies> createNetworkContext(List<FlatSpecies> oldSpeciesList, String parentUUID, FilterOptions options);
+
+	MappingNode saveMappingNode(MappingNode node, int depth);
+
+	List<NetworkInventoryItem> getListOfNetworkInventoryItems(String networkType);
 	
 }
