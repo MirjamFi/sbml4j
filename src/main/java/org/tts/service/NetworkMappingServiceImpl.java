@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.tomcat.jni.Time;
 import org.sbml.jsbml.SBO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,17 +19,21 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.tts.model.api.Input.FilterOptions;
+import org.tts.model.api.Output.MetabolicNetworkItem;
 import org.tts.model.api.Output.NodeEdgeList;
 import org.tts.model.api.Output.NodeNodeEdge;
 import org.tts.model.api.Output.SifFile;
-import org.tts.model.common.ContentGraphNode;
-import org.tts.model.common.GraphEnum.ExternalResourceType;
 import org.tts.model.common.GraphEnum.IDSystem;
 import org.tts.model.common.GraphEnum.NetworkMappingType;
 import org.tts.model.common.GraphEnum.ProvenanceGraphEdgeType;
 import org.tts.model.common.GraphEnum.WarehouseGraphEdgeType;
+import org.tts.model.flat.CatalystOf;
 import org.tts.model.flat.FlatNetworkMapping;
+import org.tts.model.flat.FlatNode;
 import org.tts.model.flat.FlatSpecies;
+import org.tts.model.flat.HasProduct;
+import org.tts.model.flat.IsReactant;
+import org.tts.model.provenance.ProvenanceEntity;
 import org.tts.model.provenance.ProvenanceGraphActivityNode;
 import org.tts.model.provenance.ProvenanceGraphAgentNode;
 import org.tts.model.warehouse.MappingNode;
@@ -67,7 +70,7 @@ public class NetworkMappingServiceImpl implements NetworkMappingService {
 	}*/
 	
 	private static int QUERY_DEPTH_ZERO = 0;
-	
+	private static int QUERY_DEPTH_ONE = 1;
 	private static int QUERY_DEPTH_TWO = 2;
 	
 	
@@ -465,6 +468,7 @@ public class NetworkMappingServiceImpl implements NetworkMappingService {
 		// attribute the new Mapping to the agent
 		this.provenanceGraphService.connect(mappingFromPathway, agentNode, ProvenanceGraphEdgeType.wasAttributedTo);
 		
+		List<String> externalResourceTypes = new ArrayList<>();
 		// TODO divert here for different mapping types
 		if(type.equals(NetworkMappingType.PATHWAYMAPPING)) {
 			// get all Transitions from Pathway
@@ -472,8 +476,102 @@ public class NetworkMappingServiceImpl implements NetworkMappingService {
 						this.graphBaseEntityRepository.getAllFlatTransitionsForPathway(pathway.getEntityUUID(), idSystem);
 			
 		} else if (type.equals(NetworkMappingType.METABOLIC)) {
-			flatTransitionsOfPathway = 
-					this.graphBaseEntityRepository.getFlatMetabolicReactionsForPathway(pathway.getEntityUUID(), idSystem);
+			//flatTransitionsOfPathway = 
+			//		this.graphBaseEntityRepository.getFlatMetabolicReactionsForPathway(pathway.getEntityUUID(), idSystem);
+			Iterable<MetabolicNetworkItem> metabolicNetworkItems = null;
+			int numberOfNodes = 0;
+			if(idSystem.equals(IDSystem.KEGG)) {
+				externalResourceTypes.add("KEGGCOMPOUND");
+				externalResourceTypes.add("KEGGGENES");
+				metabolicNetworkItems = this.graphBaseEntityRepository.getMetabolicNetworkItemsFromPathway(pathway.getEntityUUID(), idSystem, externalResourceTypes);
+			} else {
+				metabolicNetworkItems = this.graphBaseEntityRepository.getMetabolicNetworkItemsFromPathway(pathway.getEntityUUID(), idSystem);
+			}
+			for (MetabolicNetworkItem item : metabolicNetworkItems) {
+				logger.debug("MetabolicNetItem: (" + item.getExternalResourceEntity().getName() + ")-[" + item.getTransitionType() + "]->" + item.getReaction().getsBaseId());
+			}
+			Map<String, FlatNode> provUUIDToFlatNodeMap = new HashMap<>();
+			for (MetabolicNetworkItem item : metabolicNetworkItems) {
+				// reaction
+				FlatNode reaction;
+				if(provUUIDToFlatNodeMap.containsKey(item.getReaction().getEntityUUID())) {
+					reaction = provUUIDToFlatNodeMap.get(item.getReaction().getEntityUUID());
+				} else {
+					numberOfNodes++;
+					nodeTypes.add(item.getReaction().getsBaseSboTerm());
+					reaction = new FlatNode();
+					this.sbmlSimpleModelUtilityServiceImpl.setGraphBaseEntityProperties(reaction);
+					reaction.setAnnotation(item.getReaction().getAnnotation());
+					reaction.setAnnotationType(item.getReaction().getAnnotationType());
+					reaction.addAnnotation("Name", item.getReaction().getsBaseId());
+					reaction = this.graphBaseEntityRepository.save(reaction);
+					provUUIDToFlatNodeMap.put(item.getReaction().getEntityUUID(), reaction);
+					this.provenanceGraphService.connect(reaction, item.getReaction(), ProvenanceGraphEdgeType.wasDerivedFrom);
+					this.provenanceGraphService.connect(reaction, activityNode, ProvenanceGraphEdgeType.wasGeneratedBy);
+				}
+				this.warehouseGraphService.connect(mappingFromPathway, reaction, WarehouseGraphEdgeType.CONTAINS);
+				// externalResource
+				FlatNode eR;
+				if(provUUIDToFlatNodeMap.containsKey(item.getExternalResourceEntity().getEntityUUID())) {
+					eR = provUUIDToFlatNodeMap.get(item.getExternalResourceEntity().getEntityUUID());
+				} else {
+					numberOfNodes++;
+					nodeTypes.add(item.getSbmlSpecies().getsBaseSboTerm());
+					eR = new FlatNode();
+					this.sbmlSimpleModelUtilityServiceImpl.setGraphBaseEntityProperties(eR);
+					eR.setAnnotation(item.getExternalResourceEntity().getAnnotation());
+					eR.setAnnotationType(item.getExternalResourceEntity().getAnnotationType());
+					eR.addAnnotation("Name", item.getExternalResourceEntity().getName());
+					eR = this.graphBaseEntityRepository.save(eR);
+					provUUIDToFlatNodeMap.put(item.getExternalResourceEntity().getEntityUUID(), eR);
+					this.provenanceGraphService.connect(eR, item.getExternalResourceEntity(), ProvenanceGraphEdgeType.wasDerivedFrom);
+					this.provenanceGraphService.connect(eR, activityNode, ProvenanceGraphEdgeType.wasGeneratedBy);
+				}
+				this.warehouseGraphService.connect(mappingFromPathway, eR, WarehouseGraphEdgeType.CONTAINS);
+				// edge
+				ProvenanceEntity transition;
+				if(item.getTransitionType().equals("IS_REACTANT")) {
+					numberOfRelations++;
+					relationTypes.add(org.sbml.jsbml.SBO.getTerm(org.sbml.jsbml.SBO.getReactant()).getId());
+					IsReactant edge = new IsReactant();
+					this.sbmlSimpleModelUtilityServiceImpl.setGraphBaseEntityProperties(edge);
+					edge.setStartNode(eR);
+					edge.setEndNode(reaction);
+					edge.setDirected(true);
+					transition = this.graphBaseEntityRepository.save(edge, QUERY_DEPTH_ONE);
+					
+				} else if (item.getTransitionType().equals("IS_PRODUCT")) {
+					numberOfRelations++;
+					relationTypes.add(org.sbml.jsbml.SBO.getTerm(org.sbml.jsbml.SBO.getProduct()).getId());
+					HasProduct edge = new HasProduct();
+					this.sbmlSimpleModelUtilityServiceImpl.setGraphBaseEntityProperties(edge);
+					edge.setStartNode(reaction);
+					edge.setEndNode(eR);
+					edge.setDirected(true);
+					transition = this.graphBaseEntityRepository.save(edge, QUERY_DEPTH_ONE);
+				} else if (item.getTransitionType().equals("IS_CATALYST")) {
+					numberOfRelations++;
+					relationTypes.add(org.sbml.jsbml.SBO.getTerm(org.sbml.jsbml.SBO.getCatalyst()).getId());
+					CatalystOf edge = new CatalystOf();
+					this.sbmlSimpleModelUtilityServiceImpl.setGraphBaseEntityProperties(edge);
+					edge.setStartNode(eR);
+					edge.setEndNode(reaction);
+					edge.setDirected(false);
+					transition = this.graphBaseEntityRepository.save(edge, QUERY_DEPTH_ONE);
+				} else {
+					transition = null;
+				}
+				this.provenanceGraphService.connect(transition, activityNode, ProvenanceGraphEdgeType.wasGeneratedBy);
+				this.warehouseGraphService.connect(mappingFromPathway, transition, WarehouseGraphEdgeType.CONTAINS);
+			}
+			Instant endTime = Instant.now();
+			mappingFromPathway.addWarehouseAnnotation("creationstarttime", startTime.toString());
+			mappingFromPathway.addWarehouseAnnotation("creationendtime", endTime.toString());
+			mappingFromPathway.addWarehouseAnnotation("numberofnodes",  String.valueOf(numberOfNodes));
+			mappingFromPathway.addWarehouseAnnotation("numberofrelations", String.valueOf(numberOfRelations));
+			mappingFromPathway.setMappingNodeTypes(nodeTypes);
+			mappingFromPathway.setMappingRelationTypes(relationTypes);
+			return (MappingNode) this.warehouseGraphService.saveWarehouseGraphNodeEntity(mappingFromPathway, 0);
 		} else if (type.equals(NetworkMappingType.PPI)) {
 			transitionSBOTerms.add(SBO.getTerm(216).getId());
 			flatTransitionsOfPathway = 
@@ -482,9 +580,15 @@ public class NetworkMappingServiceImpl implements NetworkMappingService {
 		} else if (type.equals(NetworkMappingType.REGULATORY)) {
 			nodeSBOTerms.add("SBO:0000252");
 			nodeSBOTerms.add("SBO:0000247");
-			transitionSBOTerms.add("SBO:0000168");
+			
+			String controlSBO = "SBO:0000168";
+			transitionSBOTerms.add(controlSBO);
+			for (String controlChildSBO : this.utilityService.getAllSBOChildren(controlSBO)) {
+				transitionSBOTerms.add(controlChildSBO);
+			}
+			/*transitionSBOTerms.add("SBO:0000168");
 			transitionSBOTerms.add("SBO:0000170");
-			transitionSBOTerms.add("SBO:0000169");
+			transitionSBOTerms.add("SBO:0000169");*/
 			flatTransitionsOfPathway = 
 					this.graphBaseEntityRepository.getFlatTransitionsForPathway(pathway.getEntityUUID(), idSystem, transitionSBOTerms, nodeSBOTerms);
 		} else if (type.equals(NetworkMappingType.SIGNALLING)) {
