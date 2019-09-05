@@ -101,13 +101,18 @@ public class LoadDataController {
 	 */
 	
 	@RequestMapping(value="/allEntities", method=RequestMethod.DELETE)
-	public ResponseEntity<String> deleteAllEntites() {
+	public ResponseEntity<String> deleteAllEntites(@RequestHeader(value = "user", defaultValue = "unknown") String user) {
 		logger.info("Serving DELETE allEntities");
-		if(this.sbmlService.clearDatabase()) {
-			return new ResponseEntity<String>("Database is clear!", HttpStatus.OK);
+		if (user.equals("Thor")) {
+			if(this.sbmlService.clearDatabase()) {
+				return new ResponseEntity<String>("Database is clear!", HttpStatus.OK);
+			} else {
+				return new ResponseEntity<String>("Database is not clear!", HttpStatus.EXPECTATION_FAILED);
+			}
 		} else {
-			return new ResponseEntity<String>("Database is not clear!", HttpStatus.EXPECTATION_FAILED);
+			return new ResponseEntity<String>("Operation not allowed", HttpStatus.EXPECTATION_FAILED);
 		}
+		
 	}
 	
 	/**
