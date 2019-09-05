@@ -96,7 +96,7 @@ public class SBMLSimpleModelUtilityServiceImpl {
 	 * This is only the EntityUUID so far and no source entity is needed to copy properties from.
 	 * @param target the GraphBaseEntity for which the basic properties (entityUUID) are to be set.
 	 */
-	void setGraphBaseEntityProperties(GraphBaseEntity target) {
+	public void setGraphBaseEntityProperties(GraphBaseEntity target) {
 		setGraphBaseEntityProperties(target, null, null);
 	}
 	
