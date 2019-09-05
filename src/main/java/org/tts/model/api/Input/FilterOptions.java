@@ -1,7 +1,9 @@
 package org.tts.model.api.Input;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.hateoas.ResourceSupport;
 import org.tts.model.common.GraphEnum.NetworkMappingType;
@@ -18,6 +20,11 @@ public class FilterOptions  extends ResourceSupport {
 
 	NetworkMappingType networkType;
 	
+	Map<String, Object> annotation; // symbol to annotation map
+	
+	String annotationName;
+	
+	String annotationType;
 	
 	public String getMappingUuid() {
 		return mappingUuid;
@@ -59,6 +66,30 @@ public class FilterOptions  extends ResourceSupport {
 		this.networkType = networkType;
 	}
 
+	public Map<String, Object> getAnnotation() {
+		return annotation;
+	}
+
+	public void setAnnotation(Map<String, Object> annotation) {
+		this.annotation = annotation;
+	}
+
+	public String getAnnotationName() {
+		return annotationName;
+	}
+
+	public void setAnnotationName(String annotationName) {
+		this.annotationName = annotationName;
+	}
+
+	public String getAnnotationType() {
+		return annotationType;
+	}
+
+	public void setAnnotationType(String annotationType) {
+		this.annotationType = annotationType;
+	}
+
 	public String toString() {
 		String ret = "Filter options ";
 		if (this.mappingUuid != null) {
@@ -66,9 +97,9 @@ public class FilterOptions  extends ResourceSupport {
 			ret += this.mappingUuid;
 			ret += ") ";
 		}		
-		ret += "are: (";
+		//ret += "are: (";
 		if(this.relationTypes != null) {
-			ret += "relationTypes: ";
+			ret += "(relationTypes: ";
 			for (String type : this.relationTypes) {
 				ret += type;
 				ret += ", ";
@@ -95,6 +126,14 @@ public class FilterOptions  extends ResourceSupport {
 		}
 		ret = ret.substring(0, ret.length() - 2);
 		ret += "); ";
+		
+		if(this.annotationName != null) {
+			ret += "(annotation.";
+			ret += this.annotationName;
+			ret += "); ";
+		}
+		
+		
 		if (this.networkType != null) {
 			ret += "(networkType: ";
 			ret += this.networkType;
@@ -133,6 +172,9 @@ public class FilterOptions  extends ResourceSupport {
 				return false;
 			}
 		}
+		if (thisTransitionTypes.size() != 0) {
+			return false;
+		}
 		
 		List<String> thisNodeSymbols = new ArrayList<>(this.getNodeSymbols());
 		for (String nodeSymbol : other.getNodeSymbols()) {
@@ -140,10 +182,26 @@ public class FilterOptions  extends ResourceSupport {
 				return false;
 			}
 		}
-		
-		if (thisTransitionTypes.size() != 0) {
+		if(thisNodeSymbols.size() != 0) {
 			return false;
 		}
+		
+		if (!this.annotationName.equals(other.annotationName)) {
+			return false;
+		}
+		
+		Map<String, Object> thisAnnotationMap = new HashMap<>(this.getAnnotation());
+		if (thisAnnotationMap.size() != other.getAnnotation().size()) {
+			return false;
+		}
+		
+		for (String key : thisAnnotationMap.keySet()) {
+			if(!thisAnnotationMap.get(key).equals(other.getAnnotation().get(key))) {
+				return false;
+			}
+		}
+		
+	
 		// all comparisions valid, filterOptions are equal		
 		return true;
 	}
