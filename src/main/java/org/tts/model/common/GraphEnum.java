@@ -143,7 +143,7 @@ public class GraphEnum {
 		UNKNOWNINSOURCE("unknown");
 	 */
 	
-	public enum RelationTypes {
+	public enum RelationType {
 		DISSOCIATION("SBO:0000180"),
 		PHOSPHORYLATION("SBO:0000216"),
 		DEPHOSPHORYLATION("SBO:0000330"),
@@ -160,7 +160,7 @@ public class GraphEnum {
 		
 		private final String relType;
 		
-		private RelationTypes(String sboString) {
+		private RelationType(String sboString) {
 			this.relType = sboString;
 		}
 		

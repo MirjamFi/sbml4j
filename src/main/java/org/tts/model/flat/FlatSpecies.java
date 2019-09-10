@@ -7,7 +7,7 @@ import java.util.Map;
 
 import org.neo4j.ogm.annotation.Relationship;
 import org.tts.model.common.ContentGraphNode;
-import org.tts.model.common.GraphEnum.RelationTypes;
+import org.tts.model.common.GraphEnum.RelationType;
 
 
 public class FlatSpecies extends ContentGraphNode {
@@ -78,7 +78,7 @@ public class FlatSpecies extends ContentGraphNode {
 
 	public Map<String, List<FlatSpecies>> getAllRelatedSpecies(){
 		Map<String, List<FlatSpecies>> allRelatedSpecies = new HashMap<>();
-		for(RelationTypes type : RelationTypes.values()) {
+		for(RelationType type : RelationType.values()) {
 			switch(type) {
 			case INHIBITION:
 				if(this.inhibitionSpeciesList != null) {
