@@ -264,6 +264,44 @@ public interface GraphBaseEntityRepository extends Neo4jRepository<GraphBaseEnti
 			+ "type(t) as transitionType")
 	Iterable<MetabolicNetworkItem> getMetabolicNetworkItemsFromPathway(String entityUUID, IDSystem idSystem, List<String> externalResourceType);
 	
+	
+	/*@Query(value="MATCH "
+			+ "(p:PathwayNode)"
+			+ "-[w:Warehouse]-"
+			+ "(r:SBMLSimpleTransition) "
+			+ "WHERE p.entityUUID = $entityUUID "
+			+ "AND w.warehouseGraphEdgeType = \"CONTAINS\" "
+			+ "AND r.sBaseSboTerm in $transitionSBOTerms "
+			+ "WITH r "
+			+ "MATCH "
+			+ "(e1:ExternalResourceEntity)"
+			+ "-[bq1:BQ]-(s1:SBMLSpecies)<-[:IS]-"
+			+ "(q1:SBMLQualSpecies)"
+			+ "<-[tr1:IS_INPUT]-"
+			+ "(r)"
+			+ "-[tr2:IS_OUTPUT]->"
+			+ "(q2:SBMLQualSpecies)"
+			+ "-[:IS]->"
+			+ "(s2:SBMLSpecies)"
+			+ "-[bq2:BQ]-"
+			+ "(e2:ExternalResourceEntity) "
+			+ "WHERE e.databaseFromUri = $idSystem "
+			+ "AND e1.type in $externalResourceType "
+			+ "AND e2.type in $externalResourceType "
+			+ "AND bq1.qualifier IN [\"BQB_HAS_VERSION\", \"BQB_IS\", \"BQB_IS_ENCODED_BY\"] "
+			+ "AND bq2.qualifier IN [\"BQB_HAS_VERSION\", \"BQB_IS\", \"BQB_IS_ENCODED_BY\"] "
+			+ "RETURN "
+			+ "r as transition, "
+			+ "s as sbmlSpecies, "
+			+ "q as sbmlQualSpecies, "
+			+ "e as externalResourceEntity, "
+			+ "type(t) as transitionType")
+	Iterable<MetabolicNetworkItem> getNonMetabolicNetworkItemsFromPathway(String entityUUID, IDSystem idSystem, List<String> externalResourceType, List<String> transitionSBOTerms, List<String> nodeSBOTerms);
+	*/
+	
+	
+	
+	
 	@Query(value="MATCH"
 			+ "(p:PathwayNode {entityUUID: {0}})"
 			+ "-[:Warehouse {warehouseGraphEdgeType: \"CONTAINS\"}]-"
