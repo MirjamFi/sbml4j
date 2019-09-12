@@ -1,9 +1,11 @@
 package org.tts.model.flat;
 
 import org.neo4j.ogm.annotation.EndNode;
+import org.neo4j.ogm.annotation.RelationshipEntity;
 import org.neo4j.ogm.annotation.StartNode;
 import org.tts.model.common.ContentGraphEdge;
 
+@RelationshipEntity(type = "FLATEDGE")
 public class FlatEdge extends ContentGraphEdge {
 
 	@StartNode
@@ -14,6 +16,9 @@ public class FlatEdge extends ContentGraphEdge {
 	
 	boolean isDirected;
 	
+	String flatEdgeType;
+
+
 	public FlatNode getStartNode() {
 		return startNode;
 	}
@@ -37,5 +42,12 @@ public class FlatEdge extends ContentGraphEdge {
 	public void setDirected(boolean isDirected) {
 		this.isDirected = isDirected;
 	}
+	
+	public String getFlatEdgeType() {
+		return flatEdgeType;
+	}
 
+	public void setFlatEdgeType(String flatEdgeType) {
+		this.flatEdgeType = flatEdgeType;
+	}
 }

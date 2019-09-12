@@ -45,5 +45,15 @@ public interface MappingNodeRepository extends Neo4jRepository<MappingNode, Long
 			+ "RETURN properties(fs) as node1Properties, "
 			+ "properties(fs2) as node2properties, type(r) as edge;")
 	List<MappingReturnType> getMappingContentAsProperties(String mappingNodeEntityUUID);
+
+	
+	@Query(value = "MATCH "
+			+ "(m:MappingNode {entityUUID: {0}})"
+			+ "-[:Warehouse {warehouseGraphEdgeType: \"CONTAINS\"}]->"
+			+ "(fn:FlatNode)-[r]->(fn2:FlatNode) "
+			+ "RETURN properties(fn) as node1Properties, "
+			+ "properties(fn2) as node2Properties,"
+			+ "r.flatEdgeType as edge;")
+	List<MappingReturnType> getMappingContentWithFlatNodes(String mappingNodeEntityUUID);
 	
 }

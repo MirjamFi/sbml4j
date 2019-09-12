@@ -8,6 +8,8 @@ import org.tts.model.api.Input.FilterOptions;
 import org.tts.model.api.Output.NodeEdgeList;
 import org.tts.model.common.GraphEnum.IDSystem;
 import org.tts.model.common.GraphEnum.NetworkMappingType;
+import org.tts.model.flat.FlatEdge;
+import org.tts.model.flat.FlatNode;
 import org.tts.model.flat.FlatSpecies;
 import org.tts.model.provenance.ProvenanceGraphActivityNode;
 import org.tts.model.provenance.ProvenanceGraphAgentNode;
@@ -45,6 +47,10 @@ public interface NetworkMappingService {
 	FlatSpecies persistFlatSpecies(FlatSpecies species);
 
 	Iterable<FlatSpecies> persistListOfFlatSpecies(List<FlatSpecies> flatSpeciesList);
+
+	Iterable<FlatNode> persistListOfFlatNodes(List<FlatNode> flatNodeList);
+	
+	Iterable<FlatEdge> persistListOfFlatEdges(List<FlatEdge> flatEdgeList);
 
 	
 	
