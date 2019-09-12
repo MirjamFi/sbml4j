@@ -495,9 +495,9 @@ public class WarehouseGraphServiceImpl implements WarehouseGraphService {
 				logger.info("Overriding network extraction method due to existing annotations");
 				method = "properties";
 			}
-			mappingNEL.setAnnotationType(this.mappingNodeRepository.findByEntityUUID(mappingNodeEntityUUID).getAnnotationType());
+			
 		}
-		
+		mappingNEL.setAnnotationType(this.mappingNodeRepository.findByEntityUUID(mappingNodeEntityUUID).getAnnotationType());
 		Instant mappingNelTime = Instant.now();
 		Instant insideLoggedTime;
 		Instant insideRetrievedTime;
@@ -526,6 +526,30 @@ public class WarehouseGraphServiceImpl implements WarehouseGraphService {
 			logger.info("Using properties method to get MappingContent for mapping " + mappingNodeEntityUUID);
 			insideLoggedTime = Instant.now();
 			List<MappingReturnType> mappingReturnList = this.mappingNodeRepository.getMappingContentAsProperties(mappingNodeEntityUUID);
+			insideRetrievedTime = Instant.now();
+			for (MappingReturnType mrt : mappingReturnList) {
+				logger.info("Aha");
+				Map<String, Object> node1Annotation = new HashMap<>();
+				for (String key : mrt.getNode1Properties().keySet()) {
+					if(key.startsWith("annotation")) {
+						node1Annotation.put(key.split("\\.")[1], mrt.getNode1Properties().get(key));
+					}
+				}
+				Map<String, Object> node2Annotation = new HashMap<>();
+				for (String key : mrt.getNode2Properties().keySet()) {
+					if(key.startsWith("annotation")) {
+						node2Annotation.put(key.split("\\.")[1], mrt.getNode2Properties().get(key));
+					}
+				}
+				mappingNEL.addListEntry((String) mrt.getNode1Properties().get("symbol"), (String) mrt.getNode1Properties().get("entityUUID"), node1Annotation, (String) mrt.getNode2Properties().get("symbol"), (String) mrt.getNode2Properties().get("entityUUID"), node2Annotation, mrt.getEdge());
+			}
+			insideretrievedAndSetTime = Instant.now();
+			mappingNEL.setName(mappingNodeEntityUUID);
+			mappingNEL.setListId(-1L);
+		} else if (method.equals("flatnode")) {
+			logger.info("Using flatnode method to get MappingContent for mapping " + mappingNodeEntityUUID);
+			insideLoggedTime = Instant.now();
+			List<MappingReturnType> mappingReturnList = this.mappingNodeRepository.getMappingContentWithFlatNodes(mappingNodeEntityUUID);
 			insideRetrievedTime = Instant.now();
 			for (MappingReturnType mrt : mappingReturnList) {
 				logger.info("Aha");
