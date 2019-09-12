@@ -185,8 +185,9 @@
 	</Appenders>
 	
 	<Loggers>
-		<Logger name="org.tts" level="info" additivity="false">
+		<Logger name="org.tts" level="debug" additivity="false">
 <!-- 			<AppenderRef ref="applicationDebug" /> -->
+			<AppenderRef ref="console" /> 
 			<AppenderRef ref="applicationInfo" />
 			<AppenderRef ref="applicationWarnError" />
 		</Logger>
