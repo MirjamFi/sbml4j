@@ -482,21 +482,30 @@ public class SBMLSimpleModelServiceImpl implements SBMLService {
 					ExternalResourceEntity newExternalResourceEntity = new ExternalResourceEntity();
 					newExternalResourceEntity.setEntityUUID(UUID.randomUUID().toString());
 					newExternalResourceEntity.setUri(resource);
+					boolean isKEGG = false;
 					if (resource.contains("kegg.genes")) {
+						isKEGG = true;
 						newExternalResourceEntity.setType(ExternalResourceType.KEGGGENES);
 						newExternalResourceEntity.setDatabaseFromUri("KEGG");
 						setKeggGeneNames(resource, newExternalResourceEntity);
 					} else if(resource.contains("kegg.reaction")) {
+						isKEGG = true;
 						newExternalResourceEntity.setType(ExternalResourceType.KEGGREACTION);
 						newExternalResourceEntity.setDatabaseFromUri("KEGG");
-					} else if(resource.contains("kegg.drug")) {
+					/*} else if(resource.contains("kegg.drug")) {
+						isKEGG = true;
 						newExternalResourceEntity.setType(ExternalResourceType.KEGGDRUG);
 						newExternalResourceEntity.setDatabaseFromUri("KEGG");
-					} else if(resource.contains("kegg.compound")) {
+					*/} else if(resource.contains("kegg.compound")) {
+						isKEGG = true;
 						newExternalResourceEntity.setType(ExternalResourceType.KEGGCOMPOUND);
 						newExternalResourceEntity.setDatabaseFromUri("KEGG");
 						setKeggCompoundNames(resource, newExternalResourceEntity);
 					} 
+					
+					if(isKEGG) {
+						setKeggIdAsAnnotation(resource, newExternalResourceEntity);
+					}
 					//newBiomodelsQualifier.setEndNode(newExternalResourceEntity);
 					ExternalResourceEntity persistedNewExternalResourceEntity = this.externalResourceEntityRepository.save(newExternalResourceEntity, 0);
 					newBiomodelsQualifier.setEndNode(persistedNewExternalResourceEntity);
@@ -511,6 +520,14 @@ public class SBMLSimpleModelServiceImpl implements SBMLService {
 		return updatedSBaseEntity;
 	}	
 	
+	private void setKeggIdAsAnnotation(String resource, ExternalResourceEntity newExternalResourceEntity) {
+		String[] resourceParts =  resource.split("/");
+		String identifier = resourceParts[resourceParts.length - 1];
+		newExternalResourceEntity.addAnnotation("KeggID", identifier);
+		newExternalResourceEntity.addAnnotationType("KeggID", "String");
+		
+	}
+
 	private void setKeggCompoundNames(String resource, ExternalResourceEntity newExternalResourceEntity) {
 		// TODO Here httpService needs to fetch the resource from KEGG Compound and set the name and secondary Name
 		// what about formula? Is this more interesting? -> Do this as annotation
