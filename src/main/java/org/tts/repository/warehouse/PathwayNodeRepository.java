@@ -30,4 +30,13 @@ public interface PathwayNodeRepository extends Neo4jRepository<PathwayNode, Long
 
 	PathwayNode findByEntityUUID(String entityUUID);
 
+	@Query(value = "MATCH "
+			+ "(e:ProvenanceEntity)"
+			+ "<-[w:Warehouse]-"
+			+ "(p:PathwayNode) "
+			+ "WHERE e.entityUUID = $provenanceEntityUUID "
+			+ "AND w.warehouseGraphEdgeType = \"CONTAINS\" "
+			+ "RETURN p")
+	Iterable<PathwayNode> findAllPathwaysOfProvenanceEntity(String provenanceEntityUUID);
+	
 }
